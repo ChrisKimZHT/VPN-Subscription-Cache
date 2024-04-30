@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from io import StringIO
 
 import requests
@@ -8,7 +9,7 @@ from flask_caching import Cache
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
+cache = Cache(app, config={"CACHE_TYPE": "SimpleCache"})
 
 
 SUBSCRIBE_URL = os.environ.get("SUBSCRIBE_URL", None)
@@ -30,11 +31,21 @@ def normalize_ua(user_agent: str) -> str:
         return user_agent
 
 
+def normalize_resp_headers(headers: dict) -> dict:
+    headers["X-Upstream-Server"] = headers.pop("Server", "unknown")
+    headers["X-Upstream-Date"] = headers.pop("Date", "unknown")
+    headers["X-Upstream-Connection"] = headers.pop("Connection", "unknown")
+    headers["X-Cache-Date"] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+    headers["X-Cache-Expires"] = CACHE_TIMEOUT
+    headers.pop("Content-Length", None)
+    return headers
+
+
 @cache.memoize(timeout=CACHE_TIMEOUT)
-def get_subscribe(user_agent: str) -> str:
+def get_subscribe(user_agent: str) -> (str, dict):
     response = requests.get(SUBSCRIBE_URL, headers={"User-Agent": user_agent})
     response.raise_for_status()
-    return response.text
+    return response.text, normalize_resp_headers(dict(response.headers))
 
 
 @app.route("/", methods=["GET"])
@@ -50,12 +61,11 @@ def subscribe():
     if AUTH_TOKEN is not None and token != AUTH_TOKEN:
         return "Invalid token", 403
 
-    subscribe_data = get_subscribe(normalize_ua(user_agent))
+    subscribe_data, response_headers = get_subscribe(normalize_ua(user_agent))
     subscribe_file = StringIO(subscribe_data)
 
     response = make_response(subscribe_file.getvalue())
-    response.headers["Content-Type"] = "text/plain"
-    response.headers["Content-Disposition"] = "attachment; filename=subscribe.txt"
+    response.headers = response_headers
     return response
 
 
