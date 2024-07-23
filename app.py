@@ -86,7 +86,7 @@ def list():
     if ADMIN_TOKEN is None or token != ADMIN_TOKEN:  # deny all requests if ADMIN_TOKEN is not set
         return "Invalid token", 403
 
-    return cache.cache._cache.keys(), 200
+    return str(cache.cache._cache), 200
 
 
 if __name__ == "__main__":
