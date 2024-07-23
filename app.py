@@ -14,7 +14,8 @@ cache = Cache(app, config={"CACHE_TYPE": "SimpleCache"})
 
 SUBSCRIBE_URL = os.environ.get("SUBSCRIBE_URL", None)
 CACHE_TIMEOUT = int(os.environ.get("CACHE_TIMEOUT", 86400))
-AUTH_TOKEN = os.environ.get("AUTH_TOKEN", None)
+USER_TOKEN = os.environ.get("USER_TOKEN", None)
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", None)
 
 if SUBSCRIBE_URL is None:
     raise ValueError("SUBSCRIBE_URL is required.")
@@ -58,7 +59,7 @@ def subscribe():
     token = request.args.get("token")
     user_agent = request.headers.get("User-Agent", "clash")
 
-    if AUTH_TOKEN is not None and token != AUTH_TOKEN:
+    if USER_TOKEN is not None and token != USER_TOKEN:  # allow all requests if USER_TOKEN is not set
         return "Invalid token", 403
 
     subscribe_data, response_headers = get_subscribe(normalize_ua(user_agent))
@@ -67,6 +68,25 @@ def subscribe():
     response = make_response(subscribe_file.getvalue())
     response.headers = response_headers
     return response
+
+
+@app.route("/purge", methods=["GET"])
+def purge():
+    token = request.args.get("token")
+    if ADMIN_TOKEN is None or token != ADMIN_TOKEN:  # deny all requests if ADMIN_TOKEN is not set
+        return "Invalid token", 403
+
+    cache.clear()
+    return "OK", 200
+
+
+@app.route("/list", methods=["GET"])
+def list():
+    token = request.args.get("token")
+    if ADMIN_TOKEN is None or token != ADMIN_TOKEN:  # deny all requests if ADMIN_TOKEN is not set
+        return "Invalid token", 403
+
+    return cache.cache._cache.keys(), 200
 
 
 if __name__ == "__main__":
