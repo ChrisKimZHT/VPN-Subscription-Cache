@@ -24,10 +24,13 @@
 环境变量：
 
 - `SUBSCRIBE_URL`：订阅地址，**必填**。
-- `AUTH_TOKEN`：鉴权 token，选填，空则不鉴权。
+- `USER_TOKEN`：用户鉴权 token，选填，空则不鉴权。
+- `ADMIN_TOKEN`：管理员鉴权 token，选填，空则禁用。
 - `CACHE_TIMEOUT`：缓存超时时间/秒，选填，默认一天。
 
 使用方法：
 
 - 访问 `http://your-host:9000/subscribe` 即可获取订阅内容。
+- 访问 `http://your-host:9000/purge` 可以清除所有缓存（管理功能）。
+- 访问 `http://your-host:9000/list` 可以列出所有缓存（管理功能）。
 - 如有鉴权，请在链接尾部加上 `?token=yourtoken`。
